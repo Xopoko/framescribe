@@ -1,0 +1,4 @@
+interface:
+  display_name: "Framescribe CLI"
+  short_description: "Run Framescribe video-to-report CLI to analyze a local video and generate a report with timeline and summary artifacts."
+  default_prompt: "Use $framescribe-cli to analyze a local video with framescribe, keep defaults unless needed, and report the output directory with timeline and summary artifacts."

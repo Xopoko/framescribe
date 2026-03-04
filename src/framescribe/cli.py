@@ -16,6 +16,7 @@ from .models import (
     ProviderRunOptions,
     SamplingMode,
 )
+from .skill_install import SKILL_NAME, install_skill
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -25,6 +26,10 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Analyze a video frame-by-frame using a vision CLI provider and "
             "generate timeline and summary reports."
+        ),
+        epilog=(
+            "Extra command: framescribe install-skill "
+            "[--repo /path/to/repo] [--overwrite]"
         ),
     )
 
@@ -126,6 +131,28 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def build_install_skill_parser() -> argparse.ArgumentParser:
+    """Build parser for `framescribe install-skill` subcommand."""
+    parser = argparse.ArgumentParser(
+        prog="framescribe install-skill",
+        description=(
+            "Install bundled framescribe Codex skill either globally "
+            "($CODEX_HOME/skills) or into a local repository."
+        ),
+    )
+    parser.add_argument(
+        "--repo",
+        default=None,
+        help="Install to <repo>/skills/framescribe-cli instead of global Codex skills",
+    )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Replace existing installed skill directory if present",
+    )
+    return parser
+
+
 def _build_options(args: argparse.Namespace) -> CliOptions:
     if args.interval <= 0:
         raise FramescribeError("--interval must be > 0", exit_code=2)
@@ -178,8 +205,23 @@ def _build_options(args: argparse.Namespace) -> CliOptions:
 
 def main(argv: list[str] | None = None) -> int:
     """CLI main function used by console_scripts and __main__."""
+    effective_argv = list(sys.argv[1:] if argv is None else argv)
+
+    if effective_argv and effective_argv[0] == "install-skill":
+        parser = build_install_skill_parser()
+        args = parser.parse_args(effective_argv[1:])
+        repo_path = Path(args.repo).expanduser() if args.repo else None
+
+        try:
+            destination = install_skill(repo_path=repo_path, overwrite=bool(args.overwrite))
+            print(f"Installed skill '{SKILL_NAME}' to: {destination}")
+            return 0
+        except FramescribeError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return exc.exit_code
+
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(effective_argv)
 
     try:
         options = _build_options(args)

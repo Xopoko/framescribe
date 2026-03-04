@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Added bundled `framescribe-cli` Codex skill to repository (`skills/framescribe-cli`).
+- Added `framescribe install-skill` command to install the bundled skill:
+  - globally to `$CODEX_HOME/skills/framescribe-cli` (default),
+  - or into a local repository via `--repo <path>`.
+- Added tests for skill installation and CLI dispatch.
+
 ## 0.1.0 - 2026-03-04
 
 - Initial open-source production refactor.

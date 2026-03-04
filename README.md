@@ -55,10 +55,33 @@ Default output path (when `--output` is omitted):
 ~/.framescribe/<video_stem>/
 ```
 
+## Bundled Codex Skill
+
+The repository ships a reusable Codex skill at `skills/framescribe-cli`.
+
+Install it globally into Codex skills:
+
+```bash
+framescribe install-skill
+```
+
+Install it into another repository:
+
+```bash
+framescribe install-skill --repo /path/to/repo
+```
+
+Replace existing installed skill:
+
+```bash
+framescribe install-skill --overwrite
+```
+
 ## CLI Usage
 
 ```bash
 framescribe <video> [options]
+framescribe install-skill [--repo <path>] [--overwrite]
 ```
 
 ### Core options
@@ -93,6 +116,12 @@ framescribe <video> [options]
 - `--image-format {png,jpg}` (default: `png`)
 - `--no-summary`
 - `--verbose`
+
+### Skill installation command
+
+- `install-skill`: install bundled `framescribe-cli` Codex skill
+- `--repo <path>`: install to `<repo>/skills/framescribe-cli` instead of global Codex skills
+- `--overwrite`: replace target skill directory if it already exists
 
 ## Examples
 
