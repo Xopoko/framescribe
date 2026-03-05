@@ -31,6 +31,17 @@ Remember default output when `--output` is omitted:
 ~/.framescribe/<video_stem>/
 ```
 
+## Runtime Expectations (Important)
+
+Treat Framescribe analysis as a long-running process and wait for completion.
+
+- A short video can still take significant time because every sampled frame is analyzed separately.
+- With the current provider setup, a 10-second video can take more than 1 minute.
+- Longer videos generally take longer, especially with more sampled frames.
+- During long provider calls, expect heartbeat-style progress lines roughly every 20 seconds.
+- Do not assume the process is stuck too quickly. Wait for progress and heartbeat lines before deciding there is a failure.
+- If a quick sanity check is needed first, run with `--dry-run` or with a small `--max-frames` value.
+
 ## Execution Workflow
 
 1. Validate prerequisites before running:

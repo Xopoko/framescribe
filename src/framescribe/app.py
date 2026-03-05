@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .models import CliOptions, FramescribeError, ProviderName, SamplingMode
 from .paths import prepare_output_dir
+from .progress import run_with_heartbeat
 from .providers import CodexProvider
 from .providers.base import Provider
 from .reporting import (
@@ -26,6 +27,8 @@ from .video import (
     extract_frames_fixed,
     get_video_duration_seconds,
 )
+
+HEARTBEAT_SECONDS = 20.0
 
 
 def _sampling_description(options: CliOptions) -> str:
@@ -152,6 +155,12 @@ def run(options: CliOptions) -> Path:
         print(f"Run config: {run_config_path}")
         return output_dir
 
+    print(
+        "Note: frame-by-frame analysis can take time. With the current provider setup, "
+        "a 10-second video can take over 1 minute. Wait for progress lines; longer videos "
+        "usually take longer. Heartbeat lines appear roughly every 20 seconds while waiting."
+    )
+
     records: list[dict[str, object]] = []
     previous_short_event: str | None = None
     previous_timestamp: float | None = None
@@ -180,14 +189,26 @@ def run(options: CliOptions) -> Path:
             previous_short_event=previous_short_event,
         )
 
-        analysis_text = provider.analyze_frame(
-            image_path=frame_path,
-            prompt=prompt,
-            output_path=frame_raw_output_path,
-            run_options=options.provider_run_options,
-            verbose=options.verbose,
-        )
+        print(f"[{index + 1}/{len(frame_samples)}] start t={timestamp:.2f}s")
 
+        def _analyze_current_frame(
+            frame: Path = frame_path,
+            frame_prompt: str = prompt,
+            raw_output: Path = frame_raw_output_path,
+        ) -> str:
+            return provider.analyze_frame(
+                image_path=frame,
+                prompt=frame_prompt,
+                output_path=raw_output,
+                run_options=options.provider_run_options,
+                verbose=options.verbose,
+            )
+
+        analysis_text, frame_elapsed = run_with_heartbeat(
+            task_name=f"frame {index + 1}/{len(frame_samples)}",
+            work=_analyze_current_frame,
+            heartbeat_seconds=HEARTBEAT_SECONDS,
+        )
         frame_report_path.write_text(analysis_text + "\n", encoding="utf-8")
         short_event = parse_short_event(analysis_text)
 
@@ -206,7 +227,10 @@ def run(options: CliOptions) -> Path:
             }
         )
 
-        print(f"[{index + 1}/{len(frame_samples)}] t={timestamp:.2f}s -> {short_event}")
+        print(
+            f"[{index + 1}/{len(frame_samples)}] done "
+            f"t={timestamp:.2f}s in {frame_elapsed:.1f}s -> {short_event}"
+        )
 
     write_timeline_jsonl(timeline_jsonl_path, records)
     write_timeline_markdown(
@@ -230,20 +254,26 @@ def run(options: CliOptions) -> Path:
     ]
     sampled_lines = sample_evenly(event_lines, options.summary_max_events)
 
-    summary_text = provider.summarize(
-        prompt=build_summary_prompt(
-            language=options.report_language,
-            event_lines=sampled_lines,
-            was_sampled=len(sampled_lines) < len(event_lines),
-            total_events=len(event_lines),
-            used_events=len(sampled_lines),
-            sampling_description=sampling_description,
+    print("[summary] start")
+    summary_text, summary_elapsed = run_with_heartbeat(
+        task_name="summary",
+        work=lambda: provider.summarize(
+            prompt=build_summary_prompt(
+                language=options.report_language,
+                event_lines=sampled_lines,
+                was_sampled=len(sampled_lines) < len(event_lines),
+                total_events=len(event_lines),
+                used_events=len(sampled_lines),
+                sampling_description=sampling_description,
+            ),
+            output_path=summary_md_path,
+            run_options=options.provider_run_options,
+            verbose=options.verbose,
         ),
-        output_path=summary_md_path,
-        run_options=options.provider_run_options,
-        verbose=options.verbose,
+        heartbeat_seconds=HEARTBEAT_SECONDS,
     )
     summary_md_path.write_text(summary_text + "\n", encoding="utf-8")
+    print(f"[summary] done in {summary_elapsed:.1f}s")
 
     print("Done.")
     print(f"Output dir: {output_dir}")

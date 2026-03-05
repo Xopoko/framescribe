@@ -7,6 +7,10 @@
   - globally to `$CODEX_HOME/skills/framescribe-cli` (default),
   - or into a local repository via `--repo <path>`.
 - Added tests for skill installation and CLI dispatch.
+- Added explicit long-run runtime expectations to Framescribe skill docs, including
+  guidance that a 10-second video can take more than 1 minute with current provider flow.
+- Added concise heartbeat progress logs during long provider waits in frame analysis
+  and summary generation to reduce false "hang" diagnosis.
 
 ## 0.1.0 - 2026-03-04
 
